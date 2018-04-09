@@ -10,7 +10,13 @@ npm install
 ```
 If you want to accept incoming connections, you'll need to set up a proxy, such as nginx, to forward all websocket connections on a specific path to your daemon running this code.  See example configuration for nginx in [byteballcore](../../../byteballcore) documentation.
 
+### First Run
+```sh
+./setinfo.sh devicename passphrase
+```
+
 ## Run
+
 ```sh
 node start.js
 ```

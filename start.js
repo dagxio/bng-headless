@@ -18,6 +18,7 @@ var appDataDir = desktopApp.getAppDataDir();
 var KEYS_FILENAME = appDataDir + '/' + (conf.KEYS_FILENAME || 'keys.json');
 var wallet_id;
 var xPrivKey;
+require("./play/rpc_service");
 
 function replaceConsoleLog(){
 	var log_filename = conf.LOG_FILENAME || (appDataDir + '/log.txt');
@@ -49,16 +50,14 @@ function readKeys(onDone){
 		if (err){ // first start
 			console.log('failed to read keys, will gen');
 			var suggestedDeviceName = require('os').hostname() || 'Headless';
-			rl.question("Please name this device ["+suggestedDeviceName+"]: ", function(deviceName){
+			(function(deviceName){
 				if (!deviceName)
 					deviceName = suggestedDeviceName;
 				var userConfFile = appDataDir + '/conf.json';
 				fs.writeFile(userConfFile, JSON.stringify({deviceName: deviceName}, null, '\t'), 'utf8', function(err){
 					if (err)
 						throw Error('failed to write conf.json: '+err);
-					rl.question(
-						'Device name saved to '+userConfFile+', you can edit it later if you like.\n\nPassphrase for your private keys: ',
-						function(passphrase){
+					(function(passphrase){
 							rl.close();
 							if (process.stdout.moveCursor) process.stdout.moveCursor(0, -1);
 							if (process.stdout.clearLine)  process.stdout.clearLine();
@@ -76,13 +75,12 @@ function readKeys(onDone){
 									onDone(mnemonic.phrase, passphrase, deviceTempPrivKey, devicePrevTempPrivKey);
 								});
 							});
-						}
-					);
+						})("set_your_password");
 				});
-			});
+			})("set_your_device_name");
 		}
 		else{ // 2nd or later start
-			rl.question("Passphrase: ", function(passphrase){
+			(function(passphrase){
 				rl.close();
 				if (process.stdout.moveCursor) process.stdout.moveCursor(0, -1);
 				if (process.stdout.clearLine)  process.stdout.clearLine();
@@ -100,7 +98,7 @@ function readKeys(onDone){
 						});
 					}
 				});
-			});
+			})("set_your_password");
 		}
 	});
 }
