@@ -16,7 +16,8 @@ var storage = require('byteballcore/storage.js');
 var constants = require('byteballcore/constants.js');
 var validationUtils = require("byteballcore/validation_utils.js");
 var wallet_id;
-
+var http = require('http');
+var querystring = require('querystring');
 if (conf.bSingleAddress)
 	throw Error('can`t run in single address mode');
 
@@ -30,8 +31,8 @@ function initRPC() {
 	var balances = require('byteballcore/balances.js');
 
 	var server = rpc.Server.$create({
-		'websocket': true, // is true by default 
-		'headers': { // allow custom headers is empty by default 
+		'websocket': true, // is true by default
+		'headers': { // allow custom headers is empty by default
 			'Access-Control-Allow-Origin': '*'
 		}
 	});
@@ -41,6 +42,7 @@ function initRPC() {
 	 * @return { last_mci: {Integer}, last_stable_mci: {Integer}, count_unhandled: {Integer} }
 	 */
 	server.expose('getinfo', function (args, opt, cb) {
+		console.log("==============================", JSON.stringify(args));
 		var response = {};
 		storage.readLastMainChainIndex(function (last_mci) {
 			response.last_mci = last_mci;
@@ -48,7 +50,10 @@ function initRPC() {
 				response.last_stable_mci = last_stable_mci;
 				db.query("SELECT COUNT(*) AS count_unhandled FROM unhandled_joints", function (rows) {
 					response.count_unhandled = rows[0].count_unhandled;
-					cb(null, response);
+					db.query("SELECT address FROM unit_witnesses", function (rows) {
+						response.witnesses = rows;
+						cb(null, response);
+					});
 				});
 			});
 		});
@@ -232,6 +237,7 @@ function initRPC() {
 		});
 	});
 
+//--------------------------------在线资产管理------------------------------------
 	/**
 	 *  创建资产
 	 *  Returns asset info
@@ -246,6 +252,10 @@ function initRPC() {
 			ifError: onError,
 			ifOk: function (objJoint) {
 				network.broadcastJoint(objJoint);
+				eventBus.on('my_stable-' + objJoint.unit.unit, function () {
+					console.log(objJoint.unit.unit + "became stable");
+					notifyserver(objJoint.unit.unit);
+				});
 				cb(null, objJoint);
 			}
 		});
@@ -311,10 +321,10 @@ function initRPC() {
 			callbacks: {
 				ifError: onError,
 				ifNotEnoughFunds: onError,
-				ifOk: function(objJoint, arrRecipientChains, arrCosignerChains){
+				ifOk: function (objJoint, arrRecipientChains, arrCosignerChains) {
 					network.broadcastJoint(objJoint);
 					cb(null, objJoint);
-					if (arrRecipientChains){ // if the asset is private
+					if (arrRecipientChains) { // if the asset is private
 						// send directly to the receiver
 						network.sendPrivatePayment('wss://example.org/bb', arrRecipientChains);
 
@@ -333,20 +343,113 @@ function initRPC() {
 			ifError: onError,
 			ifOk: function (objJoint) {
 				network.broadcastJoint(objJoint);
+
 				cb(null, objJoint);
 			}
 		});
+
 		composer.composeDataJoint(args[1], args[0], headlessWallet.signer, callbacks);
 	});
 
 
 	/**
-	 * 获取资产元数据，传入asset单元unit数组
+	 * 获取资产元数据(保存到本地数据库)，传入asset单元unit数组
 	 */
 	server.expose('getAssetMetadata', function (args, opt, cb) {
 		Wallet.readAssetMetadata(args, function (asset) {
 			cb(null, asset);
 		})
+	});
+	/**
+	 * 获取匹配二维码字符串，前端qrcode生成二维码
+	 */
+	server.expose('getpairingcode', function (args, opt, cb) {
+		var code;
+		var device = require('byteballcore/device.js');
+		device.startWaitingForPairing(function (PairingInfo) {
+			var my_device_pubkey = device.getMyDevicePubKey();
+			code = "byteball:" + my_device_pubkey + "@" + conf.hub + "#" + PairingInfo.pairing_secret;
+			cb(null, code);
+		});
+	});
+	/**
+	 * 获取付款字符串，前端qrcode生成二维码
+	 */
+	server.expose('getpaycode', function (args, opt, cb) {
+		var code = "byteball:" + args[0] + "?" + "amount=5000000&asset=base";
+		cb(null, code);
+	});
+
+	/**
+	 * 前端调用，等待unit稳定后通知前端
+	 */
+	server.expose('waitstable', function (args, opt, cb) {
+		eventBus.on('new_unit', function (objJoint) {
+			if (objJoint.unit.messages[0].app === "payment") {
+				for (var obj in objJoint.unit.messages[0].payload.outputs) {
+					if (objJoint.unit.messages[0].payload.outputs[obj].address === args[0]) {
+						eventBus.on('my_stable-' + objJoint.unit.unit, function () {
+							console.log(objJoint.unit.unit + "became stable");
+							notifyserver(args[0]);
+						});
+						break;
+					}
+				}
+			}
+		});
+		cb(null, true);
+	});
+
+	server.expose('createdatafeed', function (args, opt, cb) {
+		var composer = require('byteballcore/composer.js');
+		var network = require('byteballcore/network.js');
+		var callbacks = composer.getSavingCallbacks({
+			ifNotEnoughFunds: onError,
+			ifError: onError,
+			ifOk: function (objJoint) {
+				network.broadcastJoint(objJoint);
+				cb(null, objJoint);
+			}
+		});
+		composer.composeDataFeedJoint(args[1], args[0], headlessWallet.signer, callbacks);
+	});
+
+	server.expose('createProfile', function (args, opt, cb) {
+		var composer = require('byteballcore/composer.js');
+		var network = require('byteballcore/network.js');
+		var callbacks = composer.getSavingCallbacks({
+			ifNotEnoughFunds: onError,
+			ifError: onError,
+			ifOk: function (objJoint) {
+				network.broadcastJoint(objJoint);
+				cb(null, objJoint);
+			}
+		});
+		composer.composeProfileJoint(args[1], args[0], headlessWallet.signer, callbacks);
+	});
+
+	/**
+	 * 认证
+	 */
+	server.expose('createAttestation', function (args, opt, cb) {
+		var composer = require('byteballcore/composer.js');
+		var network = require('byteballcore/network.js');
+		var callbacks = composer.getSavingCallbacks({
+			ifNotEnoughFunds: onError,
+			ifError: onError,
+			ifOk: function (objJoint) {
+				network.broadcastJoint(objJoint);
+				cb(null, objJoint);
+			}
+		});
+
+		composer.composeAttestationJoint(
+			args[0], // attestor address
+			args[1], // address of the person being attested (subject)
+			args[2], // attested profile
+			headlessWallet.signer,
+			callbacks
+		);
 	});
 
 
@@ -373,3 +476,42 @@ function getdefaultaddress(callback) {
 }
 
 eventBus.on('headless_wallet_ready', initRPC);
+// eventBus.on('my_transactions_became_stable', initRPC);//unit稳定
+// eventBus.on('mci_became_stable', initRPC);//unit稳定
+eventBus.on("paired", function (from_address, pairing_secret) {
+	// from_address:deviceaddress
+	// notifyserver(from_address);//扫码匹配通知
+});
+
+function notifyserver(unit) {
+	var postData = {
+		unit: unit
+	};
+	var content = querystring.stringify(postData);
+
+	var options = {
+		host: '127.0.0.1',
+		path: '/api/assets/notify',
+		method: 'POST',
+		port: 8080,
+		headers: {
+			'Content-Type': 'application/x-www-form-urlencoded',
+			'Content-Length': content.length
+		}
+	};
+
+	var req = http.request(options, function (res) {
+		res.setEncoding('utf8');
+		var body = '';
+		res.on('data', function (chunk) {
+			body += chunk;
+		});
+		res.on('end', function () {
+			console.log(res.headers);
+			console.log(body);
+		});
+	});
+
+	req.write(content);
+	req.end();
+};
