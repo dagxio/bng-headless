@@ -388,7 +388,7 @@ function initRPC() {
 			if (objJoint.unit.messages[0].app === "payment") {
 				for (var obj in objJoint.unit.messages[0].payload.outputs) {
 					if (objJoint.unit.messages[0].payload.outputs[obj].address === args[0]) {
-						notifyserver(args[0] + objJoint.unit.messages[0].payload.outputs[obj].address);
+						notifyserver(args[0] + objJoint.unit.unit);
 						eventBus.on('my_stable-' + objJoint.unit.unit, function () {
 							console.log(objJoint.unit.unit + "became stable");
 							notifyserver(args[0]);
