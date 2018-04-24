@@ -251,7 +251,7 @@ function initRPC() {
 			ifNotEnoughFunds: function (err) {
 				cb(err);
 			},
-			ifError: function (err, cb) {
+			ifError: function (err) {
 				cb(err);
 			},
 			ifOk: function (objJoint) {
