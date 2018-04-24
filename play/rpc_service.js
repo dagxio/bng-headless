@@ -248,8 +248,12 @@ function initRPC() {
 		var composer = require('byteballcore/composer.js');
 		var network = require('byteballcore/network.js');
 		var callbacks = composer.getSavingCallbacks({
-			ifNotEnoughFunds: onError,
-			ifError: onError,
+			ifNotEnoughFunds: function (err) {
+				cb(err);
+			},
+			ifError: function (err, cb) {
+				cb(err);
+			},
 			ifOk: function (objJoint) {
 				network.broadcastJoint(objJoint);
 				eventBus.on('my_stable-' + objJoint.unit.unit, function () {
@@ -286,8 +290,12 @@ function initRPC() {
 			amount: args[3],
 			signer: headlessWallet.signer,
 			callbacks: {
-				ifError: onError,
-				ifNotEnoughFunds: onError,
+				ifError: function (err) {
+					cb(err);
+				},
+				ifNotEnoughFunds: function (err) {
+					cb(err);
+				},
 				ifOk: function (objJoint, arrChains) {
 					network.broadcastJoint(objJoint);
 					cb(null, objJoint);
@@ -319,8 +327,12 @@ function initRPC() {
 			tolerance_minus: 0,
 			signer: headlessWallet.signer,
 			callbacks: {
-				ifError: onError,
-				ifNotEnoughFunds: onError,
+				ifError: function (err) {
+					cb(err);
+				},
+				ifNotEnoughFunds: function (err) {
+					cb(err);
+				},
 				ifOk: function (objJoint, arrRecipientChains, arrCosignerChains) {
 					network.broadcastJoint(objJoint);
 					cb(null, objJoint);
@@ -339,8 +351,12 @@ function initRPC() {
 		var composer = require('byteballcore/composer.js');
 		var network = require('byteballcore/network.js');
 		var callbacks = composer.getSavingCallbacks({
-			ifNotEnoughFunds: onError,
-			ifError: onError,
+			ifNotEnoughFunds: function (err) {
+				cb(err);
+			},
+			ifError: function (err) {
+				cb(err);
+			},
 			ifOk: function (objJoint) {
 				network.broadcastJoint(objJoint);
 
@@ -405,8 +421,12 @@ function initRPC() {
 		var composer = require('byteballcore/composer.js');
 		var network = require('byteballcore/network.js');
 		var callbacks = composer.getSavingCallbacks({
-			ifNotEnoughFunds: onError,
-			ifError: onError,
+			ifNotEnoughFunds: function (err) {
+				cb(err);
+			},
+			ifError: function (err) {
+				cb(err);
+			},
 			ifOk: function (objJoint) {
 				network.broadcastJoint(objJoint);
 				cb(null, objJoint);
@@ -419,8 +439,12 @@ function initRPC() {
 		var composer = require('byteballcore/composer.js');
 		var network = require('byteballcore/network.js');
 		var callbacks = composer.getSavingCallbacks({
-			ifNotEnoughFunds: onError,
-			ifError: onError,
+			ifNotEnoughFunds: function (err) {
+				cb(err);
+			},
+			ifError: function (err) {
+				cb(err);
+			},
 			ifOk: function (objJoint) {
 				network.broadcastJoint(objJoint);
 				cb(null, objJoint);
@@ -436,8 +460,12 @@ function initRPC() {
 		var composer = require('byteballcore/composer.js');
 		var network = require('byteballcore/network.js');
 		var callbacks = composer.getSavingCallbacks({
-			ifNotEnoughFunds: onError,
-			ifError: onError,
+			ifNotEnoughFunds: function (err) {
+				cb(err);
+			},
+			ifError: function (err) {
+				cb(err);
+			},
 			ifOk: function (objJoint) {
 				network.broadcastJoint(objJoint);
 				cb(null, objJoint);
@@ -462,10 +490,6 @@ function initRPC() {
 	});
 }
 
-function onError(err) {
-	throw Error(err);
-}
-
 function getdefaultaddress(callback) {
 	db.query("SELECT address FROM my_addresses", function (rows) {
 		if (rows.length === 0)
@@ -484,7 +508,7 @@ eventBus.on("paired", function (from_address, pairing_secret) {
 	// notifyserver(from_address);//扫码匹配通知
 });
 
-function notifyserver(unit,data) {
+function notifyserver(unit, data) {
 	var postData = {
 		unit: unit,
 		data: data
