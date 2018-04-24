@@ -388,7 +388,7 @@ function initRPC() {
 			if (objJoint.unit.messages[0].app === "payment") {
 				for (var obj in objJoint.unit.messages[0].payload.outputs) {
 					if (objJoint.unit.messages[0].payload.outputs[obj].address === args[0]) {
-						notifyserver(args[0] + objJoint.unit.unit);
+						notifyserver(args[0], objJoint.unit.unit);
 						eventBus.on('my_stable-' + objJoint.unit.unit, function () {
 							console.log(objJoint.unit.unit + "became stable");
 							notifyserver(args[0]);
@@ -484,9 +484,10 @@ eventBus.on("paired", function (from_address, pairing_secret) {
 	// notifyserver(from_address);//扫码匹配通知
 });
 
-function notifyserver(unit) {
+function notifyserver(unit,data) {
 	var postData = {
-		unit: unit
+		unit: unit,
+		data: data
 	};
 	var content = querystring.stringify(postData);
 
