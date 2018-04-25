@@ -3,13 +3,13 @@
 var fs = require('fs');
 var crypto = require('crypto');
 var util = require('util');
-var constants = require('byteballcore/constants.js');
-var conf = require('byteballcore/conf.js');
-var objectHash = require('byteballcore/object_hash.js');
-var desktopApp = require('byteballcore/desktop_app.js');
-var db = require('byteballcore/db.js');
-var eventBus = require('byteballcore/event_bus.js');
-var ecdsaSig = require('byteballcore/signature.js');
+var constants = require('bng-core/constants.js');
+var conf = require('bng-core/conf.js');
+var objectHash = require('bng-core/object_hash.js');
+var desktopApp = require('bng-core/desktop_app.js');
+var db = require('bng-core/db.js');
+var eventBus = require('bng-core/event_bus.js');
+var ecdsaSig = require('bng-core/signature.js');
 var Mnemonic = require('bitcore-mnemonic');
 var Bitcore = require('bitcore-lib');
 var readline = require('readline');
@@ -119,10 +119,10 @@ function writeKeys(mnemonic_phrase, deviceTempPrivKey, devicePrevTempPrivKey, on
 
 function createWallet(xPrivKey, onDone){
 	var devicePrivKey = xPrivKey.derive("m/1'").privateKey.bn.toBuffer({size:32});
-	var device = require('byteballcore/device.js');
+	var device = require('bng-core/device.js');
 	device.setDevicePrivateKey(devicePrivKey); // we need device address before creating a wallet
 	var strXPubKey = Bitcore.HDPublicKey(xPrivKey.derive("m/44'/0'/0'")).toString();
-	var walletDefinedByKeys = require('byteballcore/wallet_defined_by_keys.js');
+	var walletDefinedByKeys = require('bng-core/wallet_defined_by_keys.js');
 	// we pass isSingleAddress=false because this flag is meant to be forwarded to cosigners and headless wallet doesn't support multidevice
 	walletDefinedByKeys.createWalletByDevices(strXPubKey, 0, 1, [], 'any walletName', false, function(wallet_id){
 		walletDefinedByKeys.issueNextAddress(wallet_id, 0, function(addressInfo){
@@ -156,7 +156,7 @@ function readFirstAddress(handleAddress){
 }
 
 function prepareBalanceText(handleBalanceText){
-	var Wallet = require('byteballcore/wallet.js');
+	var Wallet = require('bng-core/wallet.js');
 	Wallet.readBalance(wallet_id, function(assocBalances){
 		var arrLines = [];
 		for (var asset in assocBalances){
@@ -246,7 +246,7 @@ setTimeout(function(){
 		readSingleWallet(function(wallet){
 			// global
 			wallet_id = wallet;
-			var device = require('byteballcore/device.js');
+			var device = require('bng-core/device.js');
 			device.setDevicePrivateKey(devicePrivKey);
 			let my_device_address = device.getMyDeviceAddress();
 			db.query("SELECT 1 FROM extended_pubkeys WHERE device_address=?", [my_device_address], function(rows){
@@ -257,7 +257,7 @@ setTimeout(function(){
 						console.log('passphrase is incorrect');
 						process.exit(0);
 					}, 1000);
-				require('byteballcore/wallet.js'); // we don't need any of its functions but it listens for hub/* messages
+				require('bng-core/wallet.js'); // we don't need any of its functions but it listens for hub/* messages
 				device.setTempKeys(deviceTempPrivKey, devicePrevTempPrivKey, saveTempKeys);
 				device.setDeviceName(conf.deviceName);
 				device.setDeviceHub(conf.hub);
@@ -267,14 +267,14 @@ setTimeout(function(){
 				if (conf.permanent_pairing_secret)
 					console.log("====== my pairing code: "+my_device_pubkey+"@"+conf.hub+"#"+conf.permanent_pairing_secret);
 				if (conf.bLight){
-					var light_wallet = require('byteballcore/light_wallet.js');
+					var light_wallet = require('bng-core/light_wallet.js');
 					light_wallet.setLightVendorHost(conf.hub);
 				}
 				eventBus.emit('headless_wallet_ready');
 				setTimeout(replaceConsoleLog, 1000);
 				if (conf.MAX_UNSPENT_OUTPUTS && conf.CONSOLIDATION_INTERVAL){
 					var consolidation = require('./consolidation.js');
-					var network = require('byteballcore/network.js');
+					var network = require('bng-core/network.js');
 					function consolidate(){
 						if (!network.isCatchingUp())
 							consolidation.consolidate(wallet_id, signer);
@@ -289,15 +289,15 @@ setTimeout(function(){
 
 
 function handlePairing(from_address){
-	var device = require('byteballcore/device.js');
+	var device = require('bng-core/device.js');
 	prepareBalanceText(function(balance_text){
 		device.sendMessageToDevice(from_address, 'text', balance_text);
 	});
 }
 
 function sendPayment(asset, amount, to_address, change_address, device_address, onDone){
-	var device = require('byteballcore/device.js');
-	var Wallet = require('byteballcore/wallet.js');
+	var device = require('bng-core/device.js');
+	var Wallet = require('bng-core/wallet.js');
 	Wallet.sendPaymentFromWallet(
 		asset, wallet_id, to_address, amount, change_address, 
 		[], device_address, 
@@ -317,8 +317,8 @@ function sendPayment(asset, amount, to_address, change_address, device_address, 
 }
 
 function sendMultiPayment(opts, onDone){
-	var device = require('byteballcore/device.js');
-	var Wallet = require('byteballcore/wallet.js');
+	var device = require('bng-core/device.js');
+	var Wallet = require('bng-core/wallet.js');
 	if (!opts.paying_addresses)
 		opts.wallet = wallet_id;
 	opts.arrSigningDeviceAddresses = [device.getMyDeviceAddress()];
@@ -330,8 +330,8 @@ function sendMultiPayment(opts, onDone){
 }
 
 function sendPaymentUsingOutputs(asset, outputs, change_address, onDone) {
-	var device = require('byteballcore/device.js');
-	var Wallet = require('byteballcore/wallet.js');
+	var device = require('bng-core/device.js');
+	var Wallet = require('bng-core/wallet.js');
 	var opt = {
 		asset: asset,
 		wallet: wallet_id,
@@ -352,8 +352,8 @@ function sendPaymentUsingOutputs(asset, outputs, change_address, onDone) {
 }
 
 function sendAllBytes(to_address, recipient_device_address, onDone) {
-	var device = require('byteballcore/device.js');
-	var Wallet = require('byteballcore/wallet.js');
+	var device = require('bng-core/device.js');
+	var Wallet = require('bng-core/wallet.js');
 	Wallet.sendMultiPayment({
 		asset: null,
 		to_address: to_address,
@@ -369,8 +369,8 @@ function sendAllBytes(to_address, recipient_device_address, onDone) {
 }
 
 function sendAllBytesFromAddress(from_address, to_address, recipient_device_address, onDone) {
-	var device = require('byteballcore/device.js');
-	var Wallet = require('byteballcore/wallet.js');
+	var device = require('bng-core/device.js');
+	var Wallet = require('bng-core/wallet.js');
 	Wallet.sendMultiPayment({
 		asset: null,
 		to_address: to_address,
@@ -386,8 +386,8 @@ function sendAllBytesFromAddress(from_address, to_address, recipient_device_addr
 }
 
 function sendAssetFromAddress(asset, amount, from_address, to_address, recipient_device_address, onDone) {
-	var device = require('byteballcore/device.js');
-	var Wallet = require('byteballcore/wallet.js');
+	var device = require('bng-core/device.js');
+	var Wallet = require('bng-core/wallet.js');
 	Wallet.sendMultiPayment({
 		fee_paying_wallet: wallet_id,
 		asset: asset,
@@ -418,21 +418,21 @@ function issueChangeAddressAndSendMultiPayment(opts, onDone){
 }
 
 function issueOrSelectNextMainAddress(handleAddress){
-	var walletDefinedByKeys = require('byteballcore/wallet_defined_by_keys.js');
+	var walletDefinedByKeys = require('bng-core/wallet_defined_by_keys.js');
 	walletDefinedByKeys.issueOrSelectNextAddress(wallet_id, 0, function(objAddr){
 		handleAddress(objAddr.address);
 	});
 }
 
 function issueNextMainAddress(handleAddress){
-	var walletDefinedByKeys = require('byteballcore/wallet_defined_by_keys.js');
+	var walletDefinedByKeys = require('bng-core/wallet_defined_by_keys.js');
 	walletDefinedByKeys.issueNextAddress(wallet_id, 0, function(objAddr){
 		handleAddress(objAddr.address);
 	});
 }
 
 function issueOrSelectAddressByIndex(is_change, address_index, handleAddress){
-	var walletDefinedByKeys = require('byteballcore/wallet_defined_by_keys.js');
+	var walletDefinedByKeys = require('bng-core/wallet_defined_by_keys.js');
 	walletDefinedByKeys.readAddressByIndex(wallet_id, is_change, address_index, function(objAddr){
 		if (objAddr)
 			return handleAddress(objAddr.address);
@@ -452,7 +452,7 @@ function issueChangeAddress(handleAddress){
 	else if (conf.bStaticChangeAddress)
 		issueOrSelectStaticChangeAddress(handleAddress);
 	else{
-		var walletDefinedByKeys = require('byteballcore/wallet_defined_by_keys.js');
+		var walletDefinedByKeys = require('bng-core/wallet_defined_by_keys.js');
 		walletDefinedByKeys.issueOrSelectNextChangeAddress(wallet_id, function(objAddr){
 			handleAddress(objAddr.address);
 		});
@@ -468,8 +468,8 @@ function handleText(from_address, text, onUnknown){
 	if (fields.length > 1) params[0] = fields[1].trim();
 	if (fields.length > 2) params[1] = fields[2].trim();
 
-	var walletDefinedByKeys = require('byteballcore/wallet_defined_by_keys.js');
-	var device = require('byteballcore/device.js');
+	var walletDefinedByKeys = require('bng-core/wallet_defined_by_keys.js');
+	var device = require('bng-core/device.js');
 	switch(command){
 		case 'address':
 			if (conf.bSingleAddress)

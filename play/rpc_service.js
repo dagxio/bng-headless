@@ -8,13 +8,13 @@
 
 "use strict";
 var headlessWallet = require('../start.js');
-var conf = require('byteballcore/conf.js');
-var eventBus = require('byteballcore/event_bus.js');
-var db = require('byteballcore/db.js');
-var mutex = require('byteballcore/mutex.js');
-var storage = require('byteballcore/storage.js');
-var constants = require('byteballcore/constants.js');
-var validationUtils = require("byteballcore/validation_utils.js");
+var conf = require('bng-core/conf.js');
+var eventBus = require('bng-core/event_bus.js');
+var db = require('bng-core/db.js');
+var mutex = require('bng-core/mutex.js');
+var storage = require('bng-core/storage.js');
+var constants = require('bng-core/constants.js');
+var validationUtils = require("bng-core/validation_utils.js");
 var wallet_id;
 var http = require('http');
 var querystring = require('querystring');
@@ -22,13 +22,13 @@ if (conf.bSingleAddress)
 	throw Error('can`t run in single address mode');
 
 function initRPC() {
-	var composer = require('byteballcore/composer.js');
-	var network = require('byteballcore/network.js');
+	var composer = require('bng-core/composer.js');
+	var network = require('bng-core/network.js');
 
 	var rpc = require('json-rpc2');
-	var walletDefinedByKeys = require('byteballcore/wallet_defined_by_keys.js');
-	var Wallet = require('byteballcore/wallet.js');
-	var balances = require('byteballcore/balances.js');
+	var walletDefinedByKeys = require('bng-core/wallet_defined_by_keys.js');
+	var Wallet = require('bng-core/wallet.js');
+	var balances = require('bng-core/balances.js');
 
 	var server = rpc.Server.$create({
 		'websocket': true, // is true by default
@@ -245,8 +245,8 @@ function initRPC() {
 	 *  @return {}
 	 */
 	server.expose('createAsset', function (args, opt, cb) {
-		var composer = require('byteballcore/composer.js');
-		var network = require('byteballcore/network.js');
+		var composer = require('bng-core/composer.js');
+		var network = require('bng-core/network.js');
 		var callbacks = composer.getSavingCallbacks({
 			ifNotEnoughFunds: function (err) {
 				cb(err);
@@ -277,9 +277,9 @@ function initRPC() {
 	});
 
 	server.expose('createDivisibleAssetPayment', function (args, opt, cb) {
-		var network = require('byteballcore/network.js');
-		var divisibleAsset = require('byteballcore/divisible_asset.js');
-		var walletGeneral = require('byteballcore/wallet_general.js');
+		var network = require('bng-core/network.js');
+		var divisibleAsset = require('bng-core/divisible_asset.js');
+		var walletGeneral = require('bng-core/wallet_general.js');
 
 		divisibleAsset.composeAndSaveDivisibleAssetPaymentJoint({
 			asset: args[0],
@@ -312,9 +312,9 @@ function initRPC() {
 	});
 
 	server.expose('createIndivisibleAssetPayment', function (args, opt, cb) {
-		var network = require('byteballcore/network.js');
-		var indivisibleAsset = require('byteballcore/indivisible_asset.js');
-		var walletGeneral = require('byteballcore/wallet_general.js');
+		var network = require('bng-core/network.js');
+		var indivisibleAsset = require('bng-core/indivisible_asset.js');
+		var walletGeneral = require('bng-core/wallet_general.js');
 
 		indivisibleAsset.composeAndSaveIndivisibleAssetPaymentJoint({
 			asset: args[0],
@@ -348,8 +348,8 @@ function initRPC() {
 		});
 	});
 	server.expose('createdata', function (args, opt, cb) {
-		var composer = require('byteballcore/composer.js');
-		var network = require('byteballcore/network.js');
+		var composer = require('bng-core/composer.js');
+		var network = require('bng-core/network.js');
 		var callbacks = composer.getSavingCallbacks({
 			ifNotEnoughFunds: function (err) {
 				cb(err);
@@ -381,7 +381,7 @@ function initRPC() {
 	 */
 	server.expose('getpairingcode', function (args, opt, cb) {
 		var code;
-		var device = require('byteballcore/device.js');
+		var device = require('bng-core/device.js');
 		device.startWaitingForPairing(function (PairingInfo) {
 			var my_device_pubkey = device.getMyDevicePubKey();
 			code = "byteball:" + my_device_pubkey + "@" + conf.hub + "#" + PairingInfo.pairing_secret;
@@ -418,8 +418,8 @@ function initRPC() {
 	});
 
 	server.expose('createdatafeed', function (args, opt, cb) {
-		var composer = require('byteballcore/composer.js');
-		var network = require('byteballcore/network.js');
+		var composer = require('bng-core/composer.js');
+		var network = require('bng-core/network.js');
 		var callbacks = composer.getSavingCallbacks({
 			ifNotEnoughFunds: function (err) {
 				cb(err);
@@ -436,8 +436,8 @@ function initRPC() {
 	});
 
 	server.expose('createProfile', function (args, opt, cb) {
-		var composer = require('byteballcore/composer.js');
-		var network = require('byteballcore/network.js');
+		var composer = require('bng-core/composer.js');
+		var network = require('bng-core/network.js');
 		var callbacks = composer.getSavingCallbacks({
 			ifNotEnoughFunds: function (err) {
 				cb(err);
@@ -457,8 +457,8 @@ function initRPC() {
 	 * 认证
 	 */
 	server.expose('createAttestation', function (args, opt, cb) {
-		var composer = require('byteballcore/composer.js');
-		var network = require('byteballcore/network.js');
+		var composer = require('bng-core/composer.js');
+		var network = require('bng-core/network.js');
 		var callbacks = composer.getSavingCallbacks({
 			ifNotEnoughFunds: function (err) {
 				cb(err);
