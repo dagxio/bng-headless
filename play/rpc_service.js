@@ -416,6 +416,13 @@ function initRPC() {
 		});
 		cb(null, true);
 	});
+	server.expose('waitunitstable', function (args, opt, cb) {
+		eventBus.on('my_stable-' + args[0], function () {
+			console.log(args[0] + "became stable");
+			notifyserver(args[0]);
+		});
+		cb(null, true);
+	});
 
 	server.expose('createdatafeed', function (args, opt, cb) {
 		var composer = require('bng-core/composer.js');
