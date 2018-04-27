@@ -73,6 +73,11 @@ function initRPC() {
 		var address = args[0];
 		cb(null, validationUtils.isValidAddress(address));
 	});
+	server.expose('getfirstaddress', function (args, opt, cb) {
+		getdefaultaddress(function (add) {
+			cb(null, add);
+		});
+	});
 
 	/**
 	 * Creates and returns new wallet address.
@@ -218,6 +223,30 @@ function initRPC() {
 			cb("wrong parameters");
 	});
 
+	server.expose('createPayment', function (args, opt, cb) {
+		var composer = require('bng-core/composer.js');
+		var network = require('bng-core/network.js');
+		var callbacks = composer.getSavingCallbacks({
+			ifNotEnoughFunds: function (err) {
+				cb(err);
+			},
+			ifError: function (err) {
+				cb(err);
+			},
+			ifOk: function (objJoint) {
+				network.broadcastJoint(objJoint);
+				cb(null, objJoint)
+			}
+		});
+
+		var from_address = args[0];
+		var payee_address = args[1];
+		var arrOutputs = [
+			{address: from_address, amount: 0},      // the change
+			{address: payee_address, amount: args[2]}  // the receiver
+		];
+		composer.composePaymentJoint([from_address], arrOutputs, headlessWallet.signer, callbacks);
+	});
 	/**
 	 *  Returns all the address of headless
 	 *  @return [{"address": ""}]
@@ -498,7 +527,7 @@ function initRPC() {
 }
 
 function getdefaultaddress(callback) {
-	db.query("SELECT address FROM my_addresses", function (rows) {
+	db.query("SELECT address FROM my_addresses ORDER BY creation_date ASC", function (rows) {
 		if (rows.length === 0)
 			throw Error("no wallets");
 		var address = rows[0].address;
