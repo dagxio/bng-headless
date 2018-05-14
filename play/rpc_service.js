@@ -242,21 +242,19 @@ function initRPC() {
 				cb(null, objJoint)
 			}
 		});
-
-		var from_address;
-		var payee_address = args[0];
-		var arrOutputs = [
-			{address: from_address, amount: 0},      // the change
-		];
-		for (var i = 0; i++; i < args[1].length) {
-			var obj = {
-				address: payee_address[i],
-				amount: args[1]
-			};
-			arrOutputs.push(obj);
-		}
 		getdefaultaddress(function (add) {
-			from_address = add;
+			var from_address = add;
+			var payee_address = args[0];
+			var arrOutputs = [
+				{address: from_address, amount: 0},      // the change
+			];
+			for (var i = 0; i < payee_address.length; i++) {
+				var obj = {
+					address: payee_address[i],
+					amount: args[1]
+				};
+				arrOutputs.push(obj);
+			}
 			composer.composePaymentJoint([from_address], arrOutputs, headlessWallet.signer, callbacks);
 		});
 	});
