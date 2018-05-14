@@ -223,6 +223,44 @@ function initRPC() {
 			cb("wrong parameters");
 	});
 
+	/**
+	 * 批量转账
+	 * [["N4PCD3NG6JUT5B2YBBGJ6HJCO4JS37XH","VLM4KA5FDBQ73NXQGMUDC7C47CTEOLDZ"],123]
+	 */
+	server.expose('sendtoMultiaddress', function (args, opt, cb) {
+		var composer = require('bng-core/composer.js');
+		var network = require('bng-core/network.js');
+		var callbacks = composer.getSavingCallbacks({
+			ifNotEnoughFunds: function (err) {
+				cb(err);
+			},
+			ifError: function (err) {
+				cb(err);
+			},
+			ifOk: function (objJoint) {
+				network.broadcastJoint(objJoint);
+				cb(null, objJoint)
+			}
+		});
+
+		var from_address;
+		var payee_address = args[0];
+		var arrOutputs = [
+			{address: from_address, amount: 0},      // the change
+		];
+		for (var i = 0; i++; i < args[1].length) {
+			var obj = {
+				address: payee_address[i],
+				amount: args[1]
+			};
+			arrOutputs.push(obj);
+		}
+		getdefaultaddress(function (add) {
+			from_address = add;
+			composer.composePaymentJoint([from_address], arrOutputs, headlessWallet.signer, callbacks);
+		});
+	});
+
 	server.expose('createPayment', function (args, opt, cb) {
 		var composer = require('bng-core/composer.js');
 		var network = require('bng-core/network.js');
