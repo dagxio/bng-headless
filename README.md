@@ -1,14 +1,32 @@
-# Headless wallet for Byteball network
+# [DAGX | 基于DAG的价值互联与交换网络](http://dagx.io "dagx官网")
 
-This is a headless alternative of the [GUI wallet](../../../byteball) for Byteball network.  It is designed for an always-online deployment on a server.
+DAGX Networks 是基于 DAG 技术开发的价值交换网络，新一代基于有向无环图的分布式账本技术（DLT）。“ X ” 代表基于 DAG 区块链技术的 “价值互联与交换”，赋能保险科技、医疗健康等行业。 DAGX 公链1.0已完成并上线测试。依托中钰资本在医疗健康和保险科技的丰富资源，Bsure DAPP落地。DAGX基金会打造健康与保险行业数字资产公链生态，并助力企业运用 DAGX 开放的平台与技术实现企业资产上链和价值互联、交换。
+
+- 高并发
+- 可扩展
+- 双合约
+- BAAS
+- 快支付
+- 挖矿
+- 高安全
+- 应用多
+## 基于DAG的价值交换网络
+DAGX Networks 是新一代基于有向无环图分布式账本技术（DAG）的商用价值交换网络， X 代表“价值互联与交换”。DAGX Networks 致力推动实体经济与价值互联网连接融合，赋能行业与企业资产价值上链、流通与交换，实现数字经济价值重构和价值创造。 DAGX团队认为：下一代价值互联网将会是多维多链的网络生态，就像繁荣的生物世界。目前行业主流专家依然从传统历史进行推断，认为未来DLT生态发展类似操作系统，只有3-4种主流区块链得以延续发展。DAGX团队对未来有更宏远而不同的判断： 区块链正在带来生产关系的彻底变革，实现价值互联和流通交换体系的重构。区块链通过全球多个价值交换网络和分布式多维逻辑功能链层进行资产价值互联、流通交换， 从而构筑崭新繁荣的多维多链新世界。 
+
+DAGX团队创造性提出了DAGX Value Layers分层架构体系，由不同功能层次化的逻辑功能链组成DAGX Network价值交换网络，积极推动多维多链的下一代价值互联网应用落地。
+
+DAGX公链1.0已完成开发和上线测试，并在医疗健康、保险科技等多行业展开落地合作。依托中钰资本等合作方丰富的医疗健康资源，DAGX重点赋能 “医疗健康、保险互助” 行业，打造健康与保险行业数字资产公链生态，推动各行业企业实现资产上链和价值互联、交换。
+
+# dagx网络钱包
+
+在服务器运行的钱包
 
 ## Install
 
-Install node.js, clone the repository, then say
+Install node.js
 ```sh
 npm install
 ```
-If you want to accept incoming connections, you'll need to set up a proxy, such as nginx, to forward all websocket connections on a specific path to your daemon running this code.  See example configuration for nginx in [byteballcore](../../../byteballcore) documentation.
 
 ### First Run
 ```sh
@@ -20,52 +38,3 @@ If you want to accept incoming connections, you'll need to set up a proxy, such 
 ```sh
 node start.js
 ```
-The first time you run it, it will generate a new extended private key (BIP44) and ask you for a passphrase to encrypt it.  The BIP39 mnemonic will be saved to the file keys.json in the app data directory (see [byteballcore](../../../byteballcore) for its location), the passphrase is, of course, never saved.  Every time you start the wallet, you'll have to type the passphrase.  One implication of this is the wallet cannot be started automatically when your server restarts, you'll have to ssh the server and type the passphrase.
-
-After you enter the passphrase, the wallet redirects all output to a log file in your app data directory but it still holds the terminal window.  To release it, type Ctrl-Z, then bg to resume the wallet in the background.  After that, you can safely terminate the ssh session.
-
-## Customize
-
-If you want to change any defaults, refer to the documentation of [byteballcore](../../../byteballcore), the core Byteball library `require()`'d from here.  Below are some headless wallet specific settings you might want to change:
-
-* `control_addresses`: array of device addresses of your other (likely GUI) wallets that can chat with the wallet and give commands.  To learn the device address of your GUI wallet, click menu button, then Global preferences, and look for 'Device address'.  If your `control_addresses` is empty array or contains a single address that is invalid (this is the default), then nobody can remotely control your wallet.
-* `payout_address`: if you give `pay` command over chat interface, the money will be sent to this Byteball address.
-* `hub`: hub address without wss://, the default is `byteball.org/bb`.
-* `deviceName`: the name of your device as seen in the chat interface.
-* `permanent_paring_secret`: the pairing secret used to authenticate pairing requests when you pair your GUI wallet for remote control.  The pairing secret is the part of the pairing code after #.
-
-
-## Remote control
-
-You can remotely control your wallet via chat interface from devices listed in `control_addresses`.  When the wallet starts, it prints out its pairing code.  Copy it, open your GUI wallet, menu button, paired devices, add a new device, accept invitation, paste the code.  Now your GUI wallet is paired to your headless wallet and you can find it in the list of correspondents (menu, paired devices) to start a chat.  There are three commands you can give:
-
-* `balance`: to request the current balance on the headless wallet;
-* `address`: to get to know one of the wallet's addresses, you use it to refill the wallet's balance;
-* `pay <amount in bytes>` to request withdrawal from the headless wallet to your `payout_address`.
-
-![Chat with headless wallet](chat-with-headless.png)
-
-## Differences from GUI wallet
-
-* Headless wallet (as software) can have only one wallet (as storage of funds) AKA account, its BIP44 derivation path is `m/44'/0'/0'`.  In GUI wallet (as software) you can create multiple wallets (as storage of funds).
-* Headless wallet cannot be a member of multisig address because there is nobody to present confirmation messages to.  Hence, you can't have multisig security on headless wallets and have to have other security measures in place.
-
-## Security recommendations
-
-First, don't run the server wallet if you don't absolutely need to.  For example, if you want to only accept payments, you don't need it.  Consider server wallet only if you need to *send* payments in programmatic manner.
-
-Having the keys encrypted by a passphrase helps protect against the most trivial theft of private keys in case an attacker gets access to your server.  Set a good passphrase that cannot be easily bruteforced and never store it on the server.  
-
-However, that is not enough.  If an attacker gets access to your server, he could also modify your conf.json and change `control_addresses` and `payout_address`, then wait that you restart the wallet and steal its entire balance.  To help you prevent such attacks, every time the wallet starts it prints out the current values of `control_addresses` and `payout_address`, please pay attention to these values before entering your passphrase.
-
-Use TOR ([conf.socksHost, conf.socksPort, and conf.socksLocalDNS](../../../byteballcore#confsockshost-confsocksport-and-confsockslocaldns)) to hide your server IP address from potential attackers.
-
-Don't keep more money than necessary on the server wallet, withdraw the excess using `pay` command in the chat interface.
-
-## Custom commands
-
-Payments are the central but not the only type of data that Byteball stores.  In [play/](play/) subdirectory, you will find many small scripts that demonstrate how to create other message types that are not available through the GUI wallet.  In particular, you can declare and issue your own assets, post data as an oracle, create polls and cast votes.  Just edit any of these scripts and run it.
-
-## RPC service
-
-By default, no RPC service is enabled.  If you want to manage your headless wallet via JSON-RPC API, e.g. you run an exchange, run [play/rpc_service.js](play/rpc_service.js) instead.  See the [documentation about running RPC service](../../wiki/Running-RPC-service).
