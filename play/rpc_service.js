@@ -224,6 +224,40 @@ function initRPC() {
 	});
 
 	/**
+	 * 批量发资产
+	 */
+	server.expose('sendtoMultiaddress', function (args, opt, cb) {
+		console.log('sendtoaddress ' + JSON.stringify(args));
+		let start_time = Date.now();
+		var payee_address = args[0];
+		var arrOutputs = [];
+		for (var i = 0; i < payee_address.length; i++) {
+			var obj = {
+				address: payee_address[i],
+				amount: args[1]
+			};
+			arrOutputs.push(obj);
+		}
+		var opt ={
+			asset_outputs: arrOutputs,
+			asset : args[1]
+		};
+		if (asset && !validationUtils.isValidBase64(asset, constants.HASH_LENGTH))
+			return cb("bad asset: " + asset);
+		if (amount && toAddress) {
+			if (validationUtils.isValidAddress(toAddress))
+				headlessWallet.issueChangeAddressAndSendMultiPayment(opt, function (err, unit) {
+					console.log('sendtoaddress ' + JSON.stringify(args) + ' took ' + (Date.now() - start_time) + 'ms, unit=' + unit + ', err=' + err);
+					cb(err, err ? undefined : unit);
+				});
+			else
+				cb("invalid address");
+		}
+		else
+			cb("wrong parameters");
+	});
+
+	/**
 	 * 批量转账
 	 * [["N4PCD3NG6JUT5B2YBBGJ6HJCO4JS37XH","VLM4KA5FDBQ73NXQGMUDC7C47CTEOLDZ"],123]
 	 */
