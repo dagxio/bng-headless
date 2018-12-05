@@ -8,6 +8,7 @@
 
 "use strict";
 var headlessWallet = require('../start.js');
+var split = require('../split.js');
 var conf = require('bng-core/conf.js');
 var eventBus = require('bng-core/event_bus.js');
 var db = require('bng-core/db.js');
@@ -112,8 +113,8 @@ function initRPC() {
 					if (rows[0].count)
 						db.query(
 							"SELECT asset, is_stable, SUM(amount) AS balance \n\
-							FROM outputs JOIN units USING(unit) \n\
-							WHERE is_spent=0 AND address=? AND sequence='good' AND asset " + (asset ? "=" + db.escape(asset) : "IS NULL") + " \n\
+                            FROM outputs JOIN units USING(unit) \n\
+                            WHERE is_spent=0 AND address=? AND sequence='good' AND asset " + (asset ? "=" + db.escape(asset) : "IS NULL") + " \n\
 							GROUP BY is_stable", [address],
 							function (rows) {
 								var balance = {};
@@ -497,26 +498,18 @@ function initRPC() {
 
 	/**
 	 * 前端调用，等待unit稳定后通知前端
+	 * bng-core/network.js #2087
 	 */
 	server.expose('waitstable', function (args, opt, cb) {
-		eventBus.on('new_unit', function (objJoint) {
-			if (objJoint.unit.messages[0].app === "payment") {
-				for (var obj in objJoint.unit.messages[0].payload.outputs) {
-					if (objJoint.unit.messages[0].payload.outputs[obj].address === args[0]) {
-						notifyserver(args[0], objJoint.unit.unit);
-						eventBus.on('my_stable-' + objJoint.unit.unit, function () {
-							console.log(objJoint.unit.unit + "became stable");
-							notifyserver(args[0]);
-						});
-						break;
-					}
-				}
+		eventBus.once('new_unit' + args[0], function (objJoint) {
+			if (objJoint === args[1]) {
+				notifyserver(args[0]);
 			}
 		});
 		cb(null, true);
 	});
 	server.expose('waitunitstable', function (args, opt, cb) {
-		eventBus.on('my_stable-' + args[0], function () {
+		eventBus.once('my_stable-' + args[0], function () {
 			console.log(args[0] + "became stable");
 			notifyserver(args[0]);
 		});
@@ -594,6 +587,9 @@ function initRPC() {
 		var httpServer = server.listen(conf.rpcPort, conf.rpcInterface);
 		httpServer.timeout = 900 * 1000;
 	});
+	getdefaultaddress(function (address) {
+		split.startCheckingAndSplittingLargestOutput(address, 0);
+	});
 }
 
 function getdefaultaddress(callback) {
@@ -607,12 +603,6 @@ function getdefaultaddress(callback) {
 }
 
 eventBus.on('headless_wallet_ready', initRPC);
-// eventBus.on('my_transactions_became_stable', initRPC);//unit稳定
-// eventBus.on('mci_became_stable', initRPC);//unit稳定
-eventBus.on("paired", function (from_address, pairing_secret) {
-	// from_address:deviceaddress
-	// notifyserver(from_address);//扫码匹配通知
-});
 
 function notifyserver(unit, data) {
 	var postData = {

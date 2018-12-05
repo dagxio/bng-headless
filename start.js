@@ -10,6 +10,7 @@ var desktopApp = require('bng-core/desktop_app.js');
 var db = require('bng-core/db.js');
 var eventBus = require('bng-core/event_bus.js');
 var ecdsaSig = require('bng-core/signature.js');
+var storage = require('bng-core/storage.js');
 var Mnemonic = require('bitcore-mnemonic');
 var Bitcore = require('bitcore-lib');
 var readline = require('readline');
@@ -246,6 +247,7 @@ setTimeout(function(){
 		readSingleWallet(function(wallet){
 			// global
 			wallet_id = wallet;
+			require('bng-core/wallet.js'); // we don't need any of its functions but it listens for hub/* messages
 			var device = require('bng-core/device.js');
 			device.setDevicePrivateKey(devicePrivKey);
 			let my_device_address = device.getMyDeviceAddress();
@@ -257,13 +259,21 @@ setTimeout(function(){
 						console.log('passphrase is incorrect');
 						process.exit(0);
 					}, 1000);
-				require('bng-core/wallet.js'); // we don't need any of its functions but it listens for hub/* messages
 				device.setTempKeys(deviceTempPrivKey, devicePrevTempPrivKey, saveTempKeys);
 				device.setDeviceName(conf.deviceName);
 				device.setDeviceHub(conf.hub);
 				let my_device_pubkey = device.getMyDevicePubKey();
 				console.log("====== my device address: "+my_device_address);
 				console.log("====== my device pubkey: "+my_device_pubkey);
+				if (conf.bSingleAddress)
+					readSingleAddress(function(address){
+						console.log("====== my single address: "+address);
+					});
+				else
+					readFirstAddress(function(address){
+						console.log("====== my first address: "+address);
+					});
+
 				if (conf.permanent_pairing_secret)
 					console.log("====== my pairing code: "+my_device_pubkey+"@"+conf.hub+"#"+conf.permanent_pairing_secret);
 				if (conf.bLight){
@@ -274,13 +284,7 @@ setTimeout(function(){
 				setTimeout(replaceConsoleLog, 1000);
 				if (conf.MAX_UNSPENT_OUTPUTS && conf.CONSOLIDATION_INTERVAL){
 					var consolidation = require('./consolidation.js');
-					var network = require('bng-core/network.js');
-					function consolidate(){
-						if (!network.isCatchingUp())
-							consolidation.consolidate(wallet_id, signer);
-					}
-					setInterval(consolidate, conf.CONSOLIDATION_INTERVAL);
-					setTimeout(consolidate, 300*1000);
+					consolidation.scheduleConsolidation(wallet_id, signer, conf.MAX_UNSPENT_OUTPUTS, conf.CONSOLIDATION_INTERVAL);
 				}
 			});
 		});
@@ -296,19 +300,27 @@ function handlePairing(from_address){
 }
 
 function sendPayment(asset, amount, to_address, change_address, device_address, onDone){
+	if(!onDone) {
+		return new Promise((resolve, reject) => {
+			sendPayment(asset, amount, to_address, change_address, device_address, (err, unit, assocMnemonics) => {
+				if (err) return reject(new Error(err));
+				return resolve({unit, assocMnemonics});
+			});
+		});
+	}
 	var device = require('bng-core/device.js');
 	var Wallet = require('bng-core/wallet.js');
 	Wallet.sendPaymentFromWallet(
-		asset, wallet_id, to_address, amount, change_address, 
-		[], device_address, 
-		signWithLocalPrivateKey, 
+		asset, wallet_id, to_address, amount, change_address,
+		[], device_address,
+		signWithLocalPrivateKey,
 		function(err, unit, assocMnemonics){
 			if (device_address) {
 				if (err)
 					device.sendMessageToDevice(device_address, 'text', "Failed to pay: " + err);
-			//	else
+				//	else
 				// if successful, the peer will also receive a payment notification
-				//	device.sendMessageToDevice(device_address, 'text', "paid");
+				//		device.sendMessageToDevice(device_address, 'text', "paid");
 			}
 			if (onDone)
 				onDone(err, unit, assocMnemonics);
@@ -317,6 +329,14 @@ function sendPayment(asset, amount, to_address, change_address, device_address, 
 }
 
 function sendMultiPayment(opts, onDone){
+	if(!onDone) {
+		return new Promise((resolve, reject) => {
+			sendMultiPayment(opts, (err, unit, assocMnemonics) => {
+				if (err) return reject(new Error(err));
+				return resolve({unit, assocMnemonics});
+			});
+		});
+	}
 	var device = require('bng-core/device.js');
 	var Wallet = require('bng-core/wallet.js');
 	if (!opts.paying_addresses)
@@ -330,6 +350,14 @@ function sendMultiPayment(opts, onDone){
 }
 
 function sendPaymentUsingOutputs(asset, outputs, change_address, onDone) {
+	if(!onDone) {
+		return new Promise((resolve, reject) => {
+			sendPaymentUsingOutputs(asset, outputs, change_address, (err, unit, assocMnemonics) => {
+				if (err) return reject(new Error(err));
+				return resolve({unit, assocMnemonics});
+			});
+		});
+	}
 	var device = require('bng-core/device.js');
 	var Wallet = require('bng-core/wallet.js');
 	var opt = {
@@ -352,6 +380,14 @@ function sendPaymentUsingOutputs(asset, outputs, change_address, onDone) {
 }
 
 function sendAllBytes(to_address, recipient_device_address, onDone) {
+	if(!onDone) {
+		return new Promise((resolve, reject) => {
+			sendAllBytes(to_address, recipient_device_address, (err, unit, assocMnemonics) => {
+				if (err) return reject(new Error(err));
+				return resolve({unit, assocMnemonics});
+			});
+		});
+	}
 	var device = require('bng-core/device.js');
 	var Wallet = require('bng-core/wallet.js');
 	Wallet.sendMultiPayment({
@@ -369,6 +405,14 @@ function sendAllBytes(to_address, recipient_device_address, onDone) {
 }
 
 function sendAllBytesFromAddress(from_address, to_address, recipient_device_address, onDone) {
+	if(!onDone) {
+		return new Promise((resolve, reject) => {
+			sendAllBytesFromAddress(from_address, to_address, recipient_device_address, (err, unit, assocMnemonics) => {
+				if (err) return reject(new Error(err));
+				return resolve({unit, assocMnemonics});
+			});
+		});
+	}
 	var device = require('bng-core/device.js');
 	var Wallet = require('bng-core/wallet.js');
 	Wallet.sendMultiPayment({
@@ -386,6 +430,14 @@ function sendAllBytesFromAddress(from_address, to_address, recipient_device_addr
 }
 
 function sendAssetFromAddress(asset, amount, from_address, to_address, recipient_device_address, onDone) {
+	if(!onDone) {
+		return new Promise((resolve, reject) => {
+			sendAssetFromAddress(asset, amount, from_address, to_address, recipient_device_address, (err, unit, assocMnemonics) => {
+				if (err) return reject(new Error(err));
+				return resolve({unit, assocMnemonics});
+			});
+		});
+	}
 	var device = require('bng-core/device.js');
 	var Wallet = require('bng-core/wallet.js');
 	Wallet.sendMultiPayment({
@@ -405,12 +457,28 @@ function sendAssetFromAddress(asset, amount, from_address, to_address, recipient
 }
 
 function issueChangeAddressAndSendPayment(asset, amount, to_address, device_address, onDone){
+	if(!onDone) {
+		return new Promise((resolve, reject) => {
+			issueChangeAddressAndSendPayment(asset, amount, to_address, device_address, (err, unit, assocMnemonics) => {
+				if (err) return reject(new Error(err));
+				return resolve({unit, assocMnemonics});
+			});
+		});
+	}
 	issueChangeAddress(function(change_address){
 		sendPayment(asset, amount, to_address, change_address, device_address, onDone);
 	});
 }
 
 function issueChangeAddressAndSendMultiPayment(opts, onDone){
+	if(!onDone) {
+		return new Promise((resolve, reject) => {
+			issueChangeAddressAndSendMultiPayment(opts, (err, unit, assocMnemonics) => {
+				if (err) return reject(new Error(err));
+				return resolve({unit, assocMnemonics});
+			});
+		});
+	}
 	issueChangeAddress(function(change_address){
 		opts.change_address = change_address;
 		sendMultiPayment(opts, onDone);
@@ -458,6 +526,14 @@ function issueChangeAddress(handleAddress){
 		});
 	}
 }
+
+
+function signMessage(signing_address, message, cb) {
+	var device = require('bng-core/device.js');
+	var Wallet = require('bng-core/wallet.js');
+	Wallet.signMessage(signing_address, message, [device.getMyDeviceAddress()], signWithLocalPrivateKey, cb);
+}
+
 
 function handleText(from_address, text, onUnknown){
 	
@@ -533,6 +609,12 @@ function handleText(from_address, text, onUnknown){
 			});
 			break;
 
+		case 'mci':
+			storage.readLastMainChainIndex(function(last_mci){
+				device.sendMessageToDevice(from_address, 'text', last_mci.toString());
+			});
+			break;
+
 		default:
 			if (onUnknown){
 				onUnknown(from_address, text);
@@ -600,6 +682,8 @@ exports.issueNextMainAddress = issueNextMainAddress;
 exports.issueOrSelectAddressByIndex = issueOrSelectAddressByIndex;
 exports.issueOrSelectStaticChangeAddress = issueOrSelectStaticChangeAddress;
 exports.issueChangeAddressAndSendPayment = issueChangeAddressAndSendPayment;
+exports.signMessage = signMessage;
+exports.signWithLocalPrivateKey = signWithLocalPrivateKey;
 exports.setupChatEventHandlers = setupChatEventHandlers;
 exports.handlePairing = handlePairing;
 exports.handleText = handleText;

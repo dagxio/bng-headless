@@ -12,18 +12,18 @@
   ],
   "license": "MIT",
   "repository": {
-    "url": "git://github.com/bsurevip/bng-headless.git",
+    "url": "git://github.com/dagxio/bng-headless.git",
     "type": "git"
   },
   "bugs": {
-    "url": "https://github.com/byteball/headless-byteball/issues"
+    "url": "https://github.com/dagxio/bng-headless/issues"
   },
   "browser": {
     "request": "browser-request",
     "secp256k1": "secp256k1/js"
   },
   "dependencies": {
-    "bng-core": "git+https://github.com/bsurevip/bng-core.git",
+    "byteballcore": "git+https://github.com/dagxio/bng-core.git",
     "bitcore-lib": "^0.13.14",
     "bitcore-mnemonic": "~1.0.0",
     "json-rpc2": "^1.0.2"
