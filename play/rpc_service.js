@@ -484,7 +484,7 @@ function initRPC() {
 		var device = require('bng-core/device.js');
 		device.startWaitingForPairing(function (PairingInfo) {
 			var my_device_pubkey = device.getMyDevicePubKey();
-			code = "byteball:" + my_device_pubkey + "@" + conf.hub + "#" + PairingInfo.pairing_secret;
+			code = "dagx:" + my_device_pubkey + "@" + conf.hub + "#" + PairingInfo.pairing_secret;
 			cb(null, code);
 		});
 	});
@@ -492,7 +492,7 @@ function initRPC() {
 	 * 获取付款字符串，前端qrcode生成二维码
 	 */
 	server.expose('getpaycode', function (args, opt, cb) {
-		var code = "byteball:" + args[0] + "?" + "amount=5000000&asset=base";
+		var code = "dagx:" + args[0] + "?" + "amount=5000000&asset=base";
 		cb(null, code);
 	});
 
