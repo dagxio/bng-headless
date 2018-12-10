@@ -501,9 +501,18 @@ function initRPC() {
 	 * bng-core/network.js #2087
 	 */
 	server.expose('waitstable', function (args, opt, cb) {
-		eventBus.once('new_unit' + args[0], function (objJoint) {
-			if (objJoint === args[1]) {
-				notifyserver(args[0]);
+		eventBus.on('new_unit', function (objJoint) {
+			if (objJoint.unit.messages[0].app === "payment") {
+				for (var obj in objJoint.unit.messages[0].payload.outputs) {
+					if (objJoint.unit.messages[0].payload.outputs[obj].address === args[0]) {
+						notifyserver(args[0], objJoint.unit.unit);
+						eventBus.once('my_stable-' + objJoint.unit.unit, function () {
+							console.log(objJoint.unit.unit + "became stable");
+							notifyserver(args[0]);
+						});
+						break;
+					}
+				}
 			}
 		});
 		cb(null, true);
