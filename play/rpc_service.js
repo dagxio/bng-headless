@@ -239,9 +239,9 @@ function initRPC() {
 			};
 			arrOutputs.push(obj);
 		}
-		var opt ={
+		var opt = {
 			asset_outputs: arrOutputs,
-			asset : args[1]
+			asset: args[1]
 		};
 		if (asset && !validationUtils.isValidBase64(asset, constants.HASH_LENGTH))
 			return cb("bad asset: " + asset);
@@ -356,7 +356,7 @@ function initRPC() {
 			},
 			ifOk: function (objJoint) {
 				network.broadcastJoint(objJoint);
-				eventBus.on('my_stable-' + objJoint.unit.unit, function () {
+				eventBus.once('my_stable-' + objJoint.unit.unit, function () {
 					console.log(objJoint.unit.unit + "became stable");
 					notifyserver(objJoint.unit.unit);
 				});
@@ -364,50 +364,44 @@ function initRPC() {
 			}
 		});
 		var asset = args[0];
-		var address;
-		if (args[1]) {
-			address = args[1];
+		getdefaultaddress(function (address) {
 			composer.composeAssetDefinitionJoint(address, asset, headlessWallet.signer, callbacks);
-		} else {
-			getdefaultaddress(function (add) {
-				address = add;
-				composer.composeAssetDefinitionJoint(address, asset, headlessWallet.signer, callbacks);
-			});
-		}
+		});
 	});
 
 	server.expose('createDivisibleAssetPayment', function (args, opt, cb) {
 		var network = require('bng-core/network.js');
 		var divisibleAsset = require('bng-core/divisible_asset.js');
 		var walletGeneral = require('bng-core/wallet_general.js');
+		getdefaultaddress(function (address) {
+			divisibleAsset.composeAndSaveDivisibleAssetPaymentJoint({
+				asset: args[0],
+				paying_addresses: [address],
+				fee_paying_addresses: [address],
+				change_address: address,
+				to_address: args[2],
+				amount: args[3],
+				signer: headlessWallet.signer,
+				callbacks: {
+					ifError: function (err) {
+						cb(err);
+					},
+					ifNotEnoughFunds: function (err) {
+						cb(err);
+					},
+					ifOk: function (objJoint, arrChains) {
+						network.broadcastJoint(objJoint);
+						cb(null, objJoint);
+						if (arrChains) { // if the asset is private
+							// send directly to the receiver
+							network.sendPrivatePayment('wss://hub.dagx.io/bb', arrChains);
 
-		divisibleAsset.composeAndSaveDivisibleAssetPaymentJoint({
-			asset: args[0],
-			paying_addresses: [args[1]],
-			fee_paying_addresses: [args[1]],
-			change_address: args[1],
-			to_address: args[2],
-			amount: args[3],
-			signer: headlessWallet.signer,
-			callbacks: {
-				ifError: function (err) {
-					cb(err);
-				},
-				ifNotEnoughFunds: function (err) {
-					cb(err);
-				},
-				ifOk: function (objJoint, arrChains) {
-					network.broadcastJoint(objJoint);
-					cb(null, objJoint);
-					if (arrChains) { // if the asset is private
-						// send directly to the receiver
-						network.sendPrivatePayment('wss://bsure.vip/bb', arrChains);
-
-						// or send to the receiver's device address through the receiver's hub
-						//walletGeneral.sendPrivatePayments("0F7Z7DDVBDPTYJOY7S4P24CW6K23F6B7S", arrChains);
+							// or send to the receiver's device address through the receiver's hub
+							//walletGeneral.sendPrivatePayments("0F7Z7DDVBDPTYJOY7S4P24CW6K23F6B7S", arrChains);
+						}
 					}
 				}
-			}
+			});
 		});
 	});
 
@@ -505,6 +499,7 @@ function initRPC() {
 			if (objJoint.unit.messages[0].app === "payment") {
 				for (var obj in objJoint.unit.messages[0].payload.outputs) {
 					if (objJoint.unit.messages[0].payload.outputs[obj].address === args[0]) {
+						//objJoint.unit.messages[0].payload.outputs[pay].amount == 5000000?
 						notifyserver(args[0], objJoint.unit.unit);
 						eventBus.once('my_stable-' + objJoint.unit.unit, function () {
 							console.log(objJoint.unit.unit + "became stable");
