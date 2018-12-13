@@ -466,7 +466,7 @@ function initRPC() {
 	 * 获取资产元数据(保存到本地数据库)，传入asset单元unit数组
 	 */
 	server.expose('getAssetMetadata', function (args, opt, cb) {
-		Wallet.readAssetMetadata(args, function (asset) {
+		Wallet.fetchAssetMetadata(args[0], function (err,asset) {
 			cb(null, asset);
 		})
 	});
